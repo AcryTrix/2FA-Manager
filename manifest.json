@@ -1,10 +1,10 @@
 {
-	"manifest_version": 2,
+	"manifest_version": 3,
 	"name": "2FA Manager",
 	"version": "1.0",
 	"description": "Manage 2FA codes for Google accounts",
 	"author": "AcryTrix",
-	"browser_action": {
+	"action": {
 		"default_popup": "popup.html"
 	},
 	"permissions": [
