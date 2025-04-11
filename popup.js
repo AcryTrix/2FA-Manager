@@ -1,28 +1,22 @@
 function storageGet(key) {
 	return new Promise((resolve) => {
-		chrome.storage.local.get(key, (result) => {
-			resolve(result);
-		});
+		chrome.storage.local.get(key, (result) => resolve(result));
 	});
 }
 
 function storageSet(obj) {
 	return new Promise((resolve) => {
-		chrome.storage.local.set(obj, () => {
-			resolve();
-		});
+		chrome.storage.local.set(obj, () => resolve());
 	});
 }
 
 function base32Decode(str) {
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 	str = str.toUpperCase().replace(/[^A-Z2-7]/g, '');
-	let bits = 0;
-	let value = 0;
-	let output = [];
+	let bits = 0, value = 0, output = [];
 	for (let char of str) {
 		let charValue = alphabet.indexOf(char);
-		if (charValue === -1) continue;
+		if (charValue ==== $ - 1) continue;
 		value = (value << 5) | charValue;
 		bits += 5;
 		if (bits >= 8) {
@@ -42,11 +36,7 @@ async function generateTOTP(secret) {
 		timeStep = timeStep >> 8n;
 	}
 	let key = await crypto.subtle.importKey(
-		"raw",
-		secretBytes,
-		{ name: "HMAC", hash: "SHA-1" },
-		false,
-		["sign"]
+		"raw", secretBytes, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]
 	);
 	let hmac = await crypto.subtle.sign("HMAC", key, timeStepBytes);
 	let hmacArray = new Uint8Array(hmac);
@@ -55,8 +45,7 @@ async function generateTOTP(secret) {
 		((hmacArray[offset + 1] & 0xFF) << 16) |
 		((hmacArray[offset + 2] & 0xFF) << 8) |
 		(hmacArray[offset + 3] & 0xFF);
-	let totp = (code % 1000000).toString().padStart(6, '0');
-	return totp;
+	return (code % 1000000).toString().padStart(6, '0');
 }
 
 async function getAccounts() {
@@ -71,19 +60,50 @@ async function saveAccounts(accounts) {
 function updateDisplay() {
 	getAccounts().then(accounts => {
 		let accountsDiv = document.getElementById("accounts");
-		accountsDiv.innerHTML = "";
-		if (accounts.length === 0) {
-			accountsDiv.innerHTML = "<p>No accounts added yet. Click '+' to start.</p>";
-		} else {
-			accounts.forEach((account, index) => {
-				generateTOTP(account.secret).then(totp => {
-					let accountDiv = document.createElement("div");
-					accountDiv.className = "account";
-					accountDiv.innerHTML = `<span>${account.name}: ${totp}</span>`;
-					let deleteBtn = document.createElement("button");
-					deleteBtn.textContent = "Delete";
-					deleteBtn.onclick = () => deleteAccount(index);
-					accountDiv.appendChild(deleteBtn);
-					accountsDiv.appendChild(accountDiv);
-				});
+		accountsDiv.innerHTML = accounts.length === 0
+			? "<p>No accounts added yet. Click '+' to start.</p>"
+			: "";
+		accounts.forEach((account, index) => {
+			generateTOTP(account.secret).then(totp => {
+				let accountDiv = document.createElement("div");
+				accountDiv.className = "account";
+				accountDiv.innerHTML = `<span>${account.name}: ${totp}</span>`;
+				let deleteBtn = document.createElement("button");
+				deleteBtn.textContent = "Delete";
+				deleteBtn.addEventListener("click", () => deleteAccount(index));
+				accountDiv.appendChild(deleteBtn);
+				accountsDiv.appendChild(accountDiv);
 			});
+		});
+	});
+}
+
+async function addAccount() {
+	let name = document.getElementById("name").value;
+	let secret = document.getElementById("secret").value;
+	if (name && secret) {
+		let accounts = await getAccounts();
+		accounts.push({ name, secret });
+		await saveAccounts(accounts);
+		updateDisplay();
+		document.getElementById("add-form").style.display = "none";
+		document.getElementById("name").value = "";
+		document.getElementById("secret").value = "";
+	}
+}
+
+async function deleteAccount(index) {
+	let accounts = await getAccounts();
+	accounts.splice(index, 1);
+	await saveAccounts(accounts);
+	updateDisplay();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+	updateDisplay();
+	setInterval(updateDisplay, 5000); // Увеличен интервал до 5 секунд
+	document.getElementById("add-account").addEventListener("click", () =>
+		document.getElementById("add-form").style.display = "block"
+	);
+	document.getElementById("save-account").addEventListener("click", addAccount);
+});
