@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "2FA Manager",
 	"version": "1.0",
-	"description": "Управление 2FA-кодами для различных аккаунтов",
+	"description": "Manage 2FA codes for various accounts",
 	"author": "AcryTrix",
 	"browser_action": {
 		"default_popup": "popup.html"

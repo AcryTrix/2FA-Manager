@@ -1,4 +1,3 @@
-// Вспомогательные функции для работы с chrome.storage.local через промисы
 function storageGet(key) {
 	return new Promise((resolve) => {
 		chrome.storage.local.get(key, (result) => {
@@ -15,7 +14,6 @@ function storageSet(obj) {
 	});
 }
 
-// Декодирование Base32 секрета
 function base32Decode(str) {
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 	str = str.toUpperCase().replace(/[^A-Z2-7]/g, '');
@@ -35,7 +33,6 @@ function base32Decode(str) {
 	return new Uint8Array(output);
 }
 
-// Генерация TOTP-кода
 async function generateTOTP(secret) {
 	let secretBytes = base32Decode(secret);
 	let timeStep = BigInt(Math.floor(Date.now() / 30000));
@@ -62,24 +59,21 @@ async function generateTOTP(secret) {
 	return totp;
 }
 
-// Получение сохраненных аккаунтов
 async function getAccounts() {
 	let result = await storageGet("accounts");
 	return result.accounts || [];
 }
 
-// Сохранение аккаунтов
 async function saveAccounts(accounts) {
 	await storageSet({ accounts });
 }
 
-// Обновление отображения аккаунтов и TOTP-кодов
 function updateDisplay() {
 	getAccounts().then(accounts => {
 		let accountsDiv = document.getElementById("accounts");
 		accountsDiv.innerHTML = "";
 		if (accounts.length === 0) {
-			accountsDiv.innerHTML = "<p>Аккаунты еще не добавлены. Нажмите '+' для начала.</p>";
+			accountsDiv.innerHTML = "<p>No accounts added yet. Click '+' to start.</p>";
 		} else {
 			accounts.forEach((account, index) => {
 				generateTOTP(account.secret).then(totp => {
@@ -87,45 +81,9 @@ function updateDisplay() {
 					accountDiv.className = "account";
 					accountDiv.innerHTML = `<span>${account.name}: ${totp}</span>`;
 					let deleteBtn = document.createElement("button");
-					deleteBtn.textContent = "Удалить";
+					deleteBtn.textContent = "Delete";
 					deleteBtn.onclick = () => deleteAccount(index);
 					accountDiv.appendChild(deleteBtn);
 					accountsDiv.appendChild(accountDiv);
 				});
 			});
-		}
-	});
-}
-
-// Добавление нового аккаунта
-async function addAccount() {
-	let name = document.getElementById("name").value;
-	let secret = document.getElementById("secret").value;
-	if (name && secret) {
-		let accounts = await getAccounts();
-		accounts.push({ name, secret });
-		await saveAccounts(accounts);
-		updateDisplay();
-		document.getElementById("add-form").style.display = "none";
-		document.getElementById("name").value = "";
-		document.getElementById("secret").value = "";
-	}
-}
-
-// Удаление аккаунта
-async function deleteAccount(index) {
-	let accounts = await getAccounts();
-	accounts.splice(index, 1);
-	await saveAccounts(accounts);
-	updateDisplay();
-}
-
-// Инициализация при загрузке страницы
-document.addEventListener("DOMContentLoaded", () => {
-	updateDisplay();
-	setInterval(updateDisplay, 1000); // Обновление TOTP каждую секунду
-	document.getElementById("add-account").onclick = () => {
-		document.getElementById("add-form").style.display = "block";
-	};
-	document.getElementById("save-account").onclick = addAccount;
-});
