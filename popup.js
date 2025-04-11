@@ -16,7 +16,7 @@ function base32Decode(str) {
 	let bits = 0, value = 0, output = [];
 	for (let char of str) {
 		let charValue = alphabet.indexOf(char);
-		if (charValue ==== $ - 1) continue;
+		if (charValue === -1) continue;
 		value = (value << 5) | charValue;
 		bits += 5;
 		if (bits >= 8) {
@@ -70,7 +70,7 @@ function updateDisplay() {
 				accountDiv.innerHTML = `<span>${account.name}: ${totp}</span>`;
 				let deleteBtn = document.createElement("button");
 				deleteBtn.textContent = "Delete";
-				deleteBtn.addEventListener("click", () => deleteAccount(index));
+				deleteBtn.onclick = () => deleteAccount(index);
 				accountDiv.appendChild(deleteBtn);
 				accountsDiv.appendChild(accountDiv);
 			});
@@ -101,9 +101,9 @@ async function deleteAccount(index) {
 
 document.addEventListener("DOMContentLoaded", () => {
 	updateDisplay();
-	setInterval(updateDisplay, 5000); // Увеличен интервал до 5 секунд
-	document.getElementById("add-account").addEventListener("click", () =>
-		document.getElementById("add-form").style.display = "block"
-	);
-	document.getElementById("save-account").addEventListener("click", addAccount);
+	// Update every 30 seconds to align with TOTP time steps
+	setInterval(updateDisplay, 30000);
+	document.getElementById("add-account").onclick = () =>
+		document.getElementById("add-form").style.display = "block";
+	document.getElementById("save-account").onclick = addAccount;
 });
