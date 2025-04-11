@@ -1,0 +1,68 @@
+body {
+	font-family: Arial, sans-serif;
+	width: 300px;
+	background-color: #2c1a1a;
+	/* Темно-красный фон */
+	color: #f0f0f0;
+	/* Светлый текст */
+}
+
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+h1 {
+	font-size: 18px;
+	margin: 0;
+}
+
+button {
+	background-color: #d32f2f;
+	/* Темно-красные кнопки */
+	color: #f0f0f0;
+	border: none;
+	padding: 5px 10px;
+	cursor: pointer;
+}
+
+button:hover {
+	background-color: #b71c1c;
+	/* Более темный красный при наведении */
+}
+
+.account {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+.account span {
+	font-size: 16px;
+}
+
+#accounts {
+	margin-top: 10px;
+}
+
+#add-form {
+	margin-top: 10px;
+}
+
+input {
+	width: 100%;
+	padding: 5px;
+	margin-bottom: 5px;
+	background-color: #3e2723;
+	/* Темный фон ввода */
+	color: #f0f0f0;
+	border: 1px solid #d32f2f;
+}
+
+input::placeholder {
+	color: #b0bec5;
+	/* Серые плейсхолдеры */
+}

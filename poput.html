@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>2FA Manager</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="header">
+        <h1>2FA Manager</h1>
+        <button id="add-account">+</button>
+    </div>
+    <div id="accounts"></div>
+    <div id="add-form" style="display: none;">
+        <input type="text" id="name" placeholder="Введите имя">
+        <input type="text" id="secret" placeholder="Введите секрет">
+        <button id="save-account">Сохранить</button>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>
