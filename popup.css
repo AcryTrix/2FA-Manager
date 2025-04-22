@@ -60,3 +60,18 @@ input {
 input::placeholder {
 	color: #b0bec5;
 }
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.pagination button {
+  margin: 0 5px;
+}
+
+.pagination span {
+  font-size: 14px;
+}

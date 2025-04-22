@@ -1,4 +1,3 @@
-// Universal namespace detection for chrome or browser
 const extensionAPI = typeof browser !== "undefined" ? browser : chrome;
 
 function storageGet(key) {
@@ -60,24 +59,56 @@ async function saveAccounts(accounts) {
 	await storageSet({ accounts });
 }
 
+const ITEMS_PER_PAGE = 5;
+let currentPage = 1;
+let searchQuery = '';
+
 function updateDisplay() {
 	getAccounts().then(accounts => {
+    let filtredAccounts = accounts.filter(account => 
+      account.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    let totalPage = Math.max(1, Math.ceil(filtredAccounts.length / ITEMS_PER_PAGE));
+    currentPage = Math.min(currentPage, Math.max(1, totalPage));
+
 		let accountsDiv = document.getElementById("accounts");
 		accountsDiv.innerHTML = accounts.length === 0
 			? "<p>No accounts added yet. Click '+' to start.</p>"
 			: "";
+
+    let start = (currentPage - 1) * ITEMS_PER_PAGE;
+    let end = start + ITEMS_PER_PAGE;
+    let pageAccounts = filtredAccounts.slice(start, end); 
+
 		accounts.forEach((account, index) => {
 			generateTOTP(account.secret).then(totp => {
 				let accountDiv = document.createElement("div");
 				accountDiv.className = "account";
 				accountDiv.innerHTML = `<span>${account.name}: ${totp}</span>`;
+
+        let copyBtn = document.createElement("button");
+        copyBtn.textContent = "Copy";
+        copyBtn.onclick = () => {
+          navigator.clipboard.writeText(totp);
+          copyBtn.textContent = "Copied";
+          setTimeout(() => {
+            copyBtn.textContent = "Copy";
+          }, 1000);
+        };
+
 				let deleteBtn = document.createElement("button");
 				deleteBtn.textContent = "Delete";
 				deleteBtn.onclick = () => deleteAccount(index);
+
 				accountDiv.appendChild(deleteBtn);
-				accountsDiv.appendChild(accountDiv);
+				accountDiv.appendChild(copyBtn);
+        accountsDiv.appendChild(accountDiv);
 			});
 		});
+
+    document.getElementById("page-info").textContent = "Page ${currentPage} of ${totalPage}";
+    document.getElementById("prev-page").disabled = currentPage === 1;
+    document.getElementById("next-page").disabled = currentPage === totalPage;
 	});
 }
 
@@ -107,5 +138,24 @@ document.addEventListener("DOMContentLoaded", () => {
 	setInterval(updateDisplay, 1000);
 	document.getElementById("add-account").onclick = () =>
 		document.getElementById("add-form").style.display = "block";
+
 	document.getElementById("save-account").onclick = addAccount;
+
+  document.getElementById("search").oninput = (e) => {
+    searchQuery = e.target.value;
+    currentPage = 1;
+    updateDisplay();
+  };
+
+  document.getElementById("prev-page").onclick = () => {
+    if (currentPage > 1) {
+      currentPage --;
+      updateDisplay();
+    }
+  };
+
+  document.getElementById("next-page").onclick = () => {
+    currentPage++;
+    updateDisplay();
+  };
 });
