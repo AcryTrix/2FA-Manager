@@ -83,8 +83,8 @@ function updateDisplay() {
     currentPage = Math.min(currentPage, Math.max(1, totalPage));
 
 		let accountsDiv = document.getElementById("accounts");
-		if (accounts.length === 0) {
-      accountsDiv.innerHTML = "<p>No accounts added yet. Click '+' to start.</p>";
+		if (filteredAccounts.length === 0) {
+      accountsDiv.innerHTML = searchQuery ? "<p>No accounts match your search.</p>" : "<p>No accounts added yet. Click '+' to start.</p>";
       document.getElementById("prev-page").disabled = true;
       document.getElementById("next-page").disabled = true;
       return;
@@ -101,47 +101,17 @@ function updateDisplay() {
     let end = start + ITEMS_PER_PAGE;
     let pageAccounts = filteredAccounts.slice(start, end); 
 
-		accounts.forEach((account, index) => {
+		pageAccounts.forEach((account, index) => {
 			generateTOTP(account.secret).then(totp => {
 				let accountDiv = document.createElement("div");
 				accountDiv.className = "account";
 				accountDiv.innerHTML = `<span>${account.name}: ${totp}</span>`;
-
-        let copyBtn = document.createElement("button");
-        copyBtn.textContent = "Copy";
-        copyBtn.setAttribute("data-topt", topt)
-        copyBtn.onclick = async () => {
-          try {
-            if (!navigator.clipboard) {
-              throw new Error("Clipboard API not supported");
-              await navigator.clipboard.writeText(topt);
-            } else {
-              const textarea = document.createElement("textarea");
-              textarea.value = topt;
-              document.body.appendChild(textarea);
-              textarea.select();
-              document.execCommand("copy");
-              document.body.removeChild(textarea);
-            }
-            copyBtn.textContent = "Copied";
-            setTimeout(() => {
-              copyBtn.textContent = "Copy";
-            }, 1000);
-          } catch (error) {
-            console.error("Failed to copy: ", error);
-            copyBtn.textContent = "Error: " + error.message;
-            setTimeout(() => {
-              copyBtn.textContent = "Copy";
-            }, 2000)
-          }
-        };
 
 				let deleteBtn = document.createElement("button");
 				deleteBtn.textContent = "Delete";
 				deleteBtn.onclick = () => deleteAccount(start + index);
 
 				accountDiv.appendChild(deleteBtn);
-				accountDiv.appendChild(copyBtn);
         accountsDiv.appendChild(accountDiv);
 			});
 		});
@@ -159,7 +129,7 @@ async function addAccount() {
       base32Decode(secret);
       let accounts = await getAccounts();
       if (accounts.some(account => account.name === name)) {
-        alert("An account with this name already exists.")
+        alert("An account with this name already exists.");
       }
 		  accounts.push({ name, secret });
 		  await saveAccounts(accounts);
@@ -168,10 +138,10 @@ async function addAccount() {
 		  document.getElementById("name").value = "";
 		  document.getElementById("secret").value = "";
     } catch (error) {
-      alert("Invalid secret key. Please enter a valid Base32 secret.")
+      alert("Invalid secret key. Please enter a valid Base32 secret.");
     }
 	} else {
-    alert("Please enter both name and secret.")
+    alert("Please enter both name and secret.");
   }
 }
 
@@ -184,7 +154,7 @@ async function deleteAccount(index) {
 
 document.addEventListener("DOMContentLoaded", () => {
 	updateDisplay();
-	setInterval(updateDisplay(), 1000);
+	setInterval(updateDisplay, 1000);
 	document.getElementById("add-account").onclick = () =>
 		document.getElementById("add-form").style.display = "block";
 
@@ -203,7 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("prev-page").onclick = () => {
     if (currentPage > 1) {
-      currentPage --;
+      currentPage--;
       updateDisplay();
     }
   };
