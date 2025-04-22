@@ -15,10 +15,15 @@ function storageSet(obj) {
 function base32Decode(str) {
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 	str = str.toUpperCase().replace(/[^A-Z2-7]/g, '');
-	let bits = 0, value = 0, output = [];
+	if (str.length === 0 || str.length % 8 !== 0) {
+    throw new Error("Invalid Base32 Secret")
+  }
+  let bits = 0, value = 0, output = [];
 	for (let char of str) {
 		let charValue = alphabet.indexOf(char);
-		if (charValue === -1) continue;
+		if (charValue === -1) {
+      throw new Error("Invalid character in Base32 secret")
+    };
 		value = (value << 5) | charValue;
 		bits += 5;
 		if (bits >= 8) {
@@ -30,24 +35,29 @@ function base32Decode(str) {
 }
 
 async function generateTOTP(secret) {
-	let secretBytes = base32Decode(secret);
-	let timeStep = BigInt(Math.floor(Date.now() / 30000));
-	let timeStepBytes = new Uint8Array(8);
-	for (let i = 7; i >= 0; i--) {
-		timeStepBytes[i] = Number(timeStep & 0xFFn);
-		timeStep = timeStep >> 8n;
-	}
-	let key = await crypto.subtle.importKey(
-		"raw", secretBytes, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]
-	);
-	let hmac = await crypto.subtle.sign("HMAC", key, timeStepBytes);
-	let hmacArray = new Uint8Array(hmac);
-	let offset = hmacArray[hmacArray.length - 1] & 0x0F;
-	let code = ((hmacArray[offset] & 0x7F) << 24) |
-		((hmacArray[offset + 1] & 0xFF) << 16) |
-		((hmacArray[offset + 2] & 0xFF) << 8) |
-		(hmacArray[offset + 3] & 0xFF);
-	return (code % 1000000).toString().padStart(6, '0');
+  try {
+    let secretBytes = base32Decode(secret);
+	  let timeStep = BigInt(Math.floor(Date.now() / 30000));
+	  let timeStepBytes = new Uint8Array(8);
+	  for (let i = 7; i >= 0; i--) {
+		  timeStepBytes[i] = Number(timeStep & 0xFFn);
+		  timeStep = timeStep >> 8n;
+	  }
+	  let key = await crypto.subtle.importKey(
+		  "raw", secretBytes, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]
+	  );
+	  let hmac = await crypto.subtle.sign("HMAC", key, timeStepBytes);
+	  let hmacArray = new Uint8Array(hmac);
+	  let offset = hmacArray[hmacArray.length - 1] & 0x0F;
+	  let code = ((hmacArray[offset] & 0x7F) << 24) |
+		  ((hmacArray[offset + 1] & 0xFF) << 16) |
+		  ((hmacArray[offset + 2] & 0xFF) << 8) |
+		  (hmacArray[offset + 3] & 0xFF);
+	  return (code % 1000000).toString().padStart(6, '0');
+  } catch (error) {
+    console.log("Error generating TOPT: ", error);
+    return "Error";
+  }
 }
 
 async function getAccounts() {
@@ -62,23 +72,34 @@ async function saveAccounts(accounts) {
 const ITEMS_PER_PAGE = 5;
 let currentPage = 1;
 let searchQuery = '';
+let lastUpdateTime = 0;
 
 function updateDisplay() {
 	getAccounts().then(accounts => {
-    let filtredAccounts = accounts.filter(account => 
+    let filteredAccounts = accounts.filter(account => 
       account.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    let totalPage = Math.max(1, Math.ceil(filtredAccounts.length / ITEMS_PER_PAGE));
+    let totalPage = Math.max(1, Math.ceil(filteredAccounts.length / ITEMS_PER_PAGE));
     currentPage = Math.min(currentPage, Math.max(1, totalPage));
 
 		let accountsDiv = document.getElementById("accounts");
-		accountsDiv.innerHTML = accounts.length === 0
-			? "<p>No accounts added yet. Click '+' to start.</p>"
-			: "";
+		if (accounts.length === 0) {
+      accountsDiv.innerHTML = "<p>No accounts added yet. Click '+' to start.</p>";
+      document.getElementById("prev-page").disabled = true;
+      document.getElementById("next-page").disabled = true;
+      return;
+    }
 
+    let currentTime = Math.floor(Date.now() / 30000);
+    if (currentTime === lastUpdateTime) {
+      return;
+    }
+    lastUpdateTime = currentTime;
+
+    accountsDiv.innerHTML = "";
     let start = (currentPage - 1) * ITEMS_PER_PAGE;
     let end = start + ITEMS_PER_PAGE;
-    let pageAccounts = filtredAccounts.slice(start, end); 
+    let pageAccounts = filteredAccounts.slice(start, end); 
 
 		accounts.forEach((account, index) => {
 			generateTOTP(account.secret).then(totp => {
@@ -88,17 +109,36 @@ function updateDisplay() {
 
         let copyBtn = document.createElement("button");
         copyBtn.textContent = "Copy";
-        copyBtn.onclick = () => {
-          navigator.clipboard.writeText(totp);
-          copyBtn.textContent = "Copied";
-          setTimeout(() => {
-            copyBtn.textContent = "Copy";
-          }, 1000);
+        copyBtn.setAttribute("data-topt", topt)
+        copyBtn.onclick = async () => {
+          try {
+            if (!navigator.clipboard) {
+              throw new Error("Clipboard API not supported");
+              await navigator.clipboard.writeText(topt);
+            } else {
+              const textarea = document.createElement("textarea");
+              textarea.value = topt;
+              document.body.appendChild(textarea);
+              textarea.select();
+              document.execCommand("copy");
+              document.body.removeChild(textarea);
+            }
+            copyBtn.textContent = "Copied";
+            setTimeout(() => {
+              copyBtn.textContent = "Copy";
+            }, 1000);
+          } catch (error) {
+            console.error("Failed to copy: ", error);
+            copyBtn.textContent = "Error: " + error.message;
+            setTimeout(() => {
+              copyBtn.textContent = "Copy";
+            }, 2000)
+          }
         };
 
 				let deleteBtn = document.createElement("button");
 				deleteBtn.textContent = "Delete";
-				deleteBtn.onclick = () => deleteAccount(index);
+				deleteBtn.onclick = () => deleteAccount(start + index);
 
 				accountDiv.appendChild(deleteBtn);
 				accountDiv.appendChild(copyBtn);
@@ -106,7 +146,6 @@ function updateDisplay() {
 			});
 		});
 
-    document.getElementById("page-info").textContent = "Page ${currentPage} of ${totalPage}";
     document.getElementById("prev-page").disabled = currentPage === 1;
     document.getElementById("next-page").disabled = currentPage === totalPage;
 	});
@@ -116,14 +155,24 @@ async function addAccount() {
 	let name = document.getElementById("name").value;
 	let secret = document.getElementById("secret").value;
 	if (name && secret) {
-		let accounts = await getAccounts();
-		accounts.push({ name, secret });
-		await saveAccounts(accounts);
-		updateDisplay();
-		document.getElementById("add-form").style.display = "none";
-		document.getElementById("name").value = "";
-		document.getElementById("secret").value = "";
-	}
+    try {
+      base32Decode(secret);
+      let accounts = await getAccounts();
+      if (accounts.some(account => account.name === name)) {
+        alert("An account with this name already exists.")
+      }
+		  accounts.push({ name, secret });
+		  await saveAccounts(accounts);
+		  updateDisplay();
+		  document.getElementById("add-form").style.display = "none";
+		  document.getElementById("name").value = "";
+		  document.getElementById("secret").value = "";
+    } catch (error) {
+      alert("Invalid secret key. Please enter a valid Base32 secret.")
+    }
+	} else {
+    alert("Please enter both name and secret.")
+  }
 }
 
 async function deleteAccount(index) {
@@ -135,11 +184,16 @@ async function deleteAccount(index) {
 
 document.addEventListener("DOMContentLoaded", () => {
 	updateDisplay();
-	setInterval(updateDisplay, 1000);
+	setInterval(updateDisplay(), 1000);
 	document.getElementById("add-account").onclick = () =>
 		document.getElementById("add-form").style.display = "block";
 
 	document.getElementById("save-account").onclick = addAccount;
+  document.getElementById("cancel-account").onclick = () => {
+    document.getElementById("add-form").style.display = "none";
+    document.getElementById("name").value = "";
+    document.getElementById("secret").value = "";
+  };
 
   document.getElementById("search").oninput = (e) => {
     searchQuery = e.target.value;
